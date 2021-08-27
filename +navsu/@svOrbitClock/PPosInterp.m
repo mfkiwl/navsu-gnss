@@ -1,6 +1,6 @@
-function [posP, velP,pPosInds,pPosPoly,ROut] = PPosInterp(obj,PRNs, epochs,Ppos,Pprns,...
-    Pepochs,settings,Pvel,pPosInds,pPosPoly,constInds,PconstInds,FLAG_APC_OFFSET,...
-    atxData,sunPos,dttx)
+function [posP, velP, pPosInds, pPosPoly,ROut] = PPosInterp(obj, PRNs, epochs,...
+    settings, Pvel, pPosInds, pPosPoly, constInds, FLAG_APC_OFFSET,...
+    atxData, sunPos, dttx)
 
 %% PPosInterp
 % Given IGS precise orbit from IGS products, this function performs either
@@ -9,9 +9,6 @@ function [posP, velP,pPosInds,pPosPoly,ROut] = PPosInterp(obj,PRNs, epochs,Ppos,
 % Required Inputs:
 %  PRNs                - N-length vector of PRN per desired interpolation
 %  epochs              - N-length GPS epoch per desired interpolation
-%  Ppos                - Precise position matrix from IGS products
-%  Pprns               - PRNS associated with Ppos
-%  Pepochs             - GPS epochs associated with Ppos
 %  settings            - settings structure that contains...
 %   .nPolyFit          - number of points to use for the polynomial fit
 %   .pfit              - order of fit for polynomial interpolation
@@ -23,7 +20,6 @@ function [posP, velP,pPosInds,pPosPoly,ROut] = PPosInterp(obj,PRNs, epochs,Ppos,
 %  pPosPoly
 %  constInds           - N-length vector of constellation index per desired
 %                        interpolation.  Defaults to all GPS
-%  PconstInds    
 %  FLAG_APC_OFFSET     - flag indicating whether or not to offset the
 %                        output position by the antenna phase center using 
 %                        a nominal attitude model
@@ -42,6 +38,12 @@ function [posP, velP,pPosInds,pPosPoly,ROut] = PPosInterp(obj,PRNs, epochs,Ppos,
 
 
 %%
+
+% pull some ephemeris parameters from object
+Ppos = obj.PEph.position;
+Pprns = obj.PEph.PRN;
+Pepochs = obj.PEph.epochs;
+PconstInds = obj.PEph.constellation;
 
 % Set up interpolation constants
 n     = settings.polyfit.nPolyFit; % number of nominal points to use for polynominal fit
@@ -125,11 +127,11 @@ for idx = 1:length(PRNs)
     end
     switch settings.orbitInterpMethod
         case 'poly'
-            ind1 = max(find(Pepochsi <= epochi))-n/2+1;
-            ind2 = min(find(Pepochsi > epochi))+n/2-1;
+            ind1 = find(Pepochsi <= epochi, 1, 'last') - n/2 + 1;
+            ind2 = find(Pepochsi > epochi, 1, 'first') + n/2 - 1;
         case 'lagrange'
-            ind1 = max(find(Pepochsi <= epochi))-floor(n/2);
-            ind2 = min(find(Pepochsi > epochi))+floor(n/2)-1;
+            ind1 = find(Pepochsi <= epochi, 1, 'last') - floor(n/2);
+            ind2 = find(Pepochsi > epochi, 1, 'first') + floor(n/2) - 1;
     end
     if (isempty(ind1) && isempty(ind2)) || (sum(isnan(Pposi(ind1:ind2))) == (ind2-ind1+1)) 
         continue
